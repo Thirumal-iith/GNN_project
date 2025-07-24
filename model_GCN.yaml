@@ -1,11 +1,5 @@
 name: Build GCN Model
-description: Defines a GCN model (PyTorch) with 4 hidden layers and dropout, and saves it.
-
-inputs:
-  - {name: input_dim, type: Integer}
-  - {name: hidden_dims, type: String}  # comma separated e.g. "64,64,32,32"
-  - {name: output_dim, type: Integer}
-  - {name: dropout_rate, type: Float}
+description: Defines and saves a GCN model (PyTorch) with 4 hidden layers and dropout.
 
 outputs:
   - {name: gcn_model, type: Model}
@@ -24,22 +18,17 @@ implementation:
       - -u
       - -c
       - |
-        import argparse
         import os
         import torch
         import torch.nn as nn
         import torch.nn.functional as F
         from torch_geometric.nn import GCNConv
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--input_dim', type=int, required=True)
-        parser.add_argument('--hidden_dims', type=str, required=True)
-        parser.add_argument('--output_dim', type=int, required=True)
-        parser.add_argument('--dropout_rate', type=float, required=True)
-        parser.add_argument('--gcn_model', type=str, required=True)
-        args = parser.parse_args()
-
-        hidden_dims = [int(x) for x in args.hidden_dims.split(',')]
+        # Example fixed config
+        input_dim = 128
+        hidden_dims = [64, 64, 32, 32]
+        output_dim = 3
+        dropout_rate = 0.5
 
         class GCNModel(nn.Module):
             def __init__(self, input_dim, hidden_dims, output_dim, dropout_rate):
@@ -60,19 +49,13 @@ implementation:
                 x = self.final_conv(x, edge_index)
                 return x
 
-        # Instantiate and save model
-        model = GCNModel(args.input_dim, hidden_dims, args.output_dim, args.dropout_rate)
-        os.makedirs(os.path.dirname(args.gcn_model), exist_ok=True)
-        torch.save(model.state_dict(), args.gcn_model)
+        # Instantiate and save
+        model = GCNModel(input_dim, hidden_dims, output_dim, dropout_rate)
+        output_path = 'gcn_model.pt'
+        os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+        torch.save(model.state_dict(), output_path)
+        print(f"Model saved to {output_path}")
 
     args:
-      - --input_dim
-      - {inputValue: input_dim}
-      - --hidden_dims
-      - {inputValue: hidden_dims}
-      - --output_dim
-      - {inputValue: output_dim}
-      - --dropout_rate
-      - {inputValue: dropout_rate}
       - --gcn_model
       - {outputPath: gcn_model}
