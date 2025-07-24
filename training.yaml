@@ -1,4 +1,4 @@
-name: Train TGCN Model
+name: Train  Model
 description: Loads data & weights, trains TGCN model, and saves trained weights.
 
 inputs:
