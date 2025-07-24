@@ -14,6 +14,7 @@ implementation:
       - sh
       - -c
       - |
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch || \
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
         exec "$0" "$@"
