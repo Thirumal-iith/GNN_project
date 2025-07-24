@@ -2,10 +2,8 @@ name: Load Elliptic Bitcoin Dataset
 description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
 
 inputs:
-  - {name: root_path, type: String}   # folder where data will be downloaded/stored
-
-outputs:
-  - {name: output_path, type: Model}  # output file, e.g., data/data.pt
+  - {name: root_path, type: String}         # where to store raw data
+  - {name: output_path, type: String}       # output .pt file path
 
 implementation:
   container:
@@ -34,7 +32,6 @@ implementation:
         os.makedirs(args.root_path, exist_ok=True)
         os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
 
-        print("Loading Elliptic Bitcoin dataset...")
         dataset = EllipticBitcoinDataset(root=args.root_path)
         data = dataset[0]
         torch.save(data, args.output_path)
@@ -44,4 +41,4 @@ implementation:
       - --root_path
       - {inputValue: root_path}
       - --output_path
-      - {outputPath: output_path}
+      - {inputValue: output_path}

@@ -2,12 +2,12 @@ name: Train TGCN Model
 description: Loads data & weights, trains TGCN model, and saves trained weights.
 
 inputs:
-  - {name: data_path, type: Model}          # processed data .pt
-  - {name: weights_path, type: Metrics}     # weights.json
-  - {name: config_path, type: String}       # optional config file (currently not used, but kept for extensibility)
+  - {name: data_path, type: String}          # processed data .pt
+  - {name: weights_path, type: Json}         # weights.json
+  - {name: config_path, type: String}        # optional config file (currently not used, but kept for extensibility)
 
 outputs:
-  - {name: model_out, type: Model}          # saved trained model weights
+  - {name: model_out, type: Model}           # saved trained model weights
 
 implementation:
   container:

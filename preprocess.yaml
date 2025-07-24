@@ -2,11 +2,11 @@ name: Preprocess Elliptic Data
 description: Analyzes class distribution, computes alpha & class weights, saves processed data & weights.
 
 inputs:
-  - {name: input_path, type: Model}  # input .pt data file
+  - {name: input_path, type: String}  # input .pt data file
 
 outputs:
-  - {name: data_out, type: Model}    # processed data file
-  - {name: weights_out, type: Metrics}  # weights.json
+  - {name: data_out, type: String}    # processed data file (.pt)
+  - {name: weights_out, type: Json}   # weights.json
 
 implementation:
   container:

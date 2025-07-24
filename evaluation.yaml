@@ -2,12 +2,12 @@ name: Evaluate TGCN Model
 description: Loads trained TGCN model and data, evaluates accuracy & metrics, saves as JSON report.
 
 inputs:
-  - {name: data_path, type: Model}        # processed data .pt
-  - {name: model_path, type: Model}       # trained model weights
-  - {name: config_path, type: String}     # config file (.json)
+  - {name: data_path, type: String}        # processed data .pt
+  - {name: model_path, type: Model}        # trained model weights
+  - {name: config_path, type: String}      # config file (.json)
 
 outputs:
-  - {name: metrics_out, type: Metrics}    # evaluation metrics JSON
+  - {name: metrics_out, type: Metrics}     # evaluation metrics JSON
 
 implementation:
   container:
