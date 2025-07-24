@@ -1,8 +1,13 @@
 name: Build GCN Model
 description: Defines and saves a GCN model (PyTorch) with 4 hidden layers and dropout.
 
+inputs:
+  - {name: weights, type: Json, description: "Class/focal weights as JSON"}
+  - {name: config_file, type: Json, description: "GCN model configuration as JSON"}
+
 outputs:
-  - {name: gcn_model, type: Model}
+  - {name: gcn_model, type: Model, description: "Serialized GCN model"}
+  - {name: updated_config, type: Json, description: "Updated model configuration as JSON", path: "{updated_config}"}
 
 implementation:
   container:
@@ -19,16 +24,23 @@ implementation:
       - -c
       - |
         import os
+        import json
         import torch
         import torch.nn as nn
         import torch.nn.functional as F
         from torch_geometric.nn import GCNConv
 
-        # Example fixed config
-        input_dim = 128
-        hidden_dims = [64, 64, 32, 32]
-        output_dim = 3
-        dropout_rate = 0.5
+        # Read weights and config
+        with open('{inputPath: weights}') as wf:
+            weights = json.load(wf)
+        with open('{inputPath: config_file}') as cf:
+            config = json.load(cf)
+
+        # Fill in defaults if needed
+        input_dim = config.get('input_dim', 128)
+        hidden_dims = config.get('hidden_dims', [64, 64, 32, 32])
+        output_dim = config.get('output_dim', 3)
+        dropout_rate = config.get('dropout_rate', 0.5)
 
         class GCNModel(nn.Module):
             def __init__(self, input_dim, hidden_dims, output_dim, dropout_rate):
@@ -49,13 +61,27 @@ implementation:
                 x = self.final_conv(x, edge_index)
                 return x
 
-        # Instantiate and save
-        model = GCNModel(input_dim, hidden_dims, output_dim, dropout_rate)
-        output_path = 'gcn_model.pt'
-        os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
-        torch.save(model.state_dict(), output_path)
-        print(f"Model saved to {output_path}")
+        # Add weights to config if needed
+        config['focal_loss_alpha'] = weights.get('focal_loss_alpha', None)
+        config['class_weights'] = weights.get('class_weights', None)
 
+        # Save updated config
+        with open('{outputPath: updated_config}', 'w') as uf:
+            json.dump(config, uf)
+
+        # Instantiate and save model
+        model = GCNModel(input_dim, hidden_dims, output_dim, dropout_rate)
+        gcn_model_path = '{outputPath: gcn_model}'
+        os.makedirs(os.path.dirname(gcn_model_path) or '.', exist_ok=True)
+        torch.save(model.state_dict(), gcn_model_path)
+        print(f"Model saved to {gcn_model_path}")
+        print(f"Updated config saved to {os.path.abspath('{outputPath: updated_config}')}")
     args:
+      - --weights
+      - {inputPath: weights}
+      - --config_file
+      - {inputPath: config_file}
       - --gcn_model
       - {outputPath: gcn_model}
+      - --updated_config
+      - {outputPath: updated_config}

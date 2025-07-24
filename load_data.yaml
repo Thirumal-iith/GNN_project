@@ -3,7 +3,9 @@ description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
 
 inputs:
   - {name: root_path, type: String}         # where to store raw data
-  - {name: output_path, type: String}       # output .pt file path
+
+outputs:
+  - {name: output_path, type: String, description: "Output .pt file path", path: "{output_path}"}
 
 implementation:
   container:
@@ -41,4 +43,4 @@ implementation:
       - --root_path
       - {inputValue: root_path}
       - --output_path
-      - {inputValue: output_path}
+      - {outputPath: output_path}
