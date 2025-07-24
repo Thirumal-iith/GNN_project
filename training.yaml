@@ -1,0 +1,74 @@
+name: Train TGCN Model
+description: Loads data & weights, trains TGCN model, and saves trained weights.
+
+inputs:
+  - {name: data_path, type: Model}          # processed data .pt
+  - {name: weights_path, type: Metrics}     # weights.json
+  - {name: config_path, type: String}       # optional config file (currently not used, but kept for extensibility)
+
+outputs:
+  - {name: model_out, type: Model}          # saved trained model weights
+
+implementation:
+  container:
+    image: python:3.9
+    command:
+      - sh
+      - -c
+      - |
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric || \
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
+        exec "$0" "$@"
+      - python3
+      - -u
+      - -c
+      - |
+        import torch
+        from tgcn_model import TGCN
+        import argparse
+        import json
+        import os
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--data_path', type=str, required=True)
+        parser.add_argument('--weights_path', type=str, required=True)
+        parser.add_argument('--config_path', type=str, required=True)
+        parser.add_argument('--model_out', type=str, required=True)
+        args = parser.parse_args()
+
+        os.makedirs(os.path.dirname(args.model_out), exist_ok=True)
+
+        data = torch.load(args.data_path)
+        with open(args.weights_path) as f:
+            weights = json.load(f)
+
+        # Build config
+        config = {
+            'input_dim': data.x.shape[1],
+            'output_dim': int(data.y.max()) + 1,
+            'hidden_dim': 32,
+            'epochs': 50,
+            'focal_loss_alpha': weights['focal_loss_alpha'],
+            'class_weights': weights['class_weights'],
+        }
+
+        model = TGCN(config)
+
+        print("Starting training...")
+        for epoch in range(config['epochs']):
+            loss = model.train_step(data, data.train_mask)
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch:03d} | Loss: {loss:.4f}")
+
+        torch.save(model.state_dict(), args.model_out)
+        print(f"Saved trained model to {args.model_out}")
+
+    args:
+      - --data_path
+      - {inputPath: data_path}
+      - --weights_path
+      - {inputPath: weights_path}
+      - --config_path
+      - {inputValue: config_path}
+      - --model_out
+      - {outputPath: model_out}
