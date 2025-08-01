@@ -1,12 +1,14 @@
 name: Build Model
-description: Instantiates a model using create_model from the NeSy-Factory-Models GitHub repo and saves it.
+description: Instantiates a model using create_model from the NeSy-Factory-Models GitHub repo, updates config with weights, and saves both model and updated config.
 
 inputs:
-  - { name: config_path, type: String, description: "Path to model config JSON file" }
+  - { name: weights_json, type: Json, description: "JSON with weight info (e.g., alpha, class_weights)" }
+  - { name: config_json, type: Json, description: "Model config as JSON dict" }
   - { name: model_name, type: String, description: "Name of the model to instantiate (e.g., tgcn, ffnetwork)" }
 
 outputs:
   - { name: model_out, type: Model, description: "Path to save the model weights", path: "{model_out}" }
+  - { name: config_updated, type: Json, description: "Updated config dict", path: "{config_updated}" }
 
 implementation:
   container:
@@ -15,19 +17,14 @@ implementation:
       - sh
       - -c
       - |
-        # Upgrade pip and install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet pip --upgrade
 
-        # Install PyTorch with CUDA 11.8 (change +cu118 to +cpu if you do not have GPU support)
         python3 -m pip install --quiet torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu118 -f https://download.pytorch.org/whl/torch_stable.html
 
-        # Install PyG extensions
         python3 -m pip install --quiet torch-scatter torch-sparse torch-cluster torch-spline-conv -f https://data.pyg.org/whl/torch-2.0.1+cu118.html
 
-        # Install scikit-learn for compatibility
         python3 -m pip install --quiet scikit-learn
 
-        # Install your custom factory library
         python3 -m pip install --quiet \
           "git+https://naga-mobius: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@github.com/gaiangroup/NeSy-Factory-Models.git#egg=nesy-factory-models[geometric,temporal]"
 
@@ -37,37 +34,56 @@ implementation:
       - -c
       - |
         import torch
-        import json
         import argparse
+        import json
         import os
 
-        # Import directly from your pip-installed library
+        # Import from the installed library
         from nesy_factory_models.GNNs import create_model
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--config_path', type=str, required=True)
+        parser.add_argument('--weights_json', type=str, required=True)
+        parser.add_argument('--config_json', type=str, required=True)
         parser.add_argument('--model_name', type=str, required=True)
         parser.add_argument('--model_out', type=str, required=True)
+        parser.add_argument('--config_updated', type=str, required=True)
         args = parser.parse_args()
 
-        # Load config from JSON file
-        with open(args.config_path) as f:
+        # Load input JSON dicts
+        with open(args.weights_json, "r") as f:
+            weights = json.load(f)
+        with open(args.config_json, "r") as f:
             config = json.load(f)
 
-        # Instantiate model using factory
+        # Update config with weights info and any other required keys
+        if 'focal_loss_alpha' in weights:
+            config['focal_loss_alpha'] = weights['focal_loss_alpha']
+        if 'class_weights' in weights:
+            config['class_weights'] = weights['class_weights']
+        # You can add other update rules here
+
+        # Instantiate model
         model = create_model(args.model_name, config)
 
-        # Ensure output directory exists
+        # Ensure output directories exist
         os.makedirs(os.path.dirname(args.model_out), exist_ok=True)
+        os.makedirs(os.path.dirname(args.config_updated), exist_ok=True)
 
-        # Save model state dict
+        # Save model and updated config
         torch.save(model.state_dict(), args.model_out)
+        with open(args.config_updated, "w") as f:
+            json.dump(config, f, indent=2)
         print(f"Model saved to {args.model_out}")
+        print(f"Updated config saved to {args.config_updated}")
 
     args:
-      - --config_path
-      - {inputValue: config_path}
+      - --weights_json
+      - {inputPath: weights_json}
+      - --config_json
+      - {inputPath: config_json}
       - --model_name
       - {inputValue: model_name}
       - --model_out
       - {outputPath: model_out}
+      - --config_updated
+      - {outputPath: config_updated}
