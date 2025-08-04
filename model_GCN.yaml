@@ -3,7 +3,7 @@ description: Instantiates a model using create_model from the NeSy-Factory-Model
 
 inputs:
   - { name: weights_json, type: Json, description: "JSON with weight info (e.g., alpha, class_weights)" }
-  - { name: config_json, type: Json, description: "Model config as JSON dict" }
+  - { name: config_str, type: String, description: "Model config as JSON string" }
   - { name: model_name, type: String, description: "Name of the model to instantiate (e.g., tgcn, ffnetwork)" }
 
 outputs:
@@ -38,49 +38,49 @@ implementation:
         import json
         import os
 
-        # Import from the installed library
         from nesy_factory_models.GNNs import create_model
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--weights_json', type=str, required=True)
-        parser.add_argument('--config_json', type=str, required=True)
+        parser.add_argument('--config_str', type=str, required=True)
         parser.add_argument('--model_name', type=str, required=True)
         parser.add_argument('--model_out', type=str, required=True)
         parser.add_argument('--config_updated', type=str, required=True)
         args = parser.parse_args()
 
-        # Load input JSON dicts
+        # Load inputs
         with open(args.weights_json, "r") as f:
             weights = json.load(f)
-        with open(args.config_json, "r") as f:
-            config = json.load(f)
 
-        # Update config with weights info and any other required keys
+        config = json.loads(args.config_str)
+
+        # Update config with weights
         if 'focal_loss_alpha' in weights:
             config['focal_loss_alpha'] = weights['focal_loss_alpha']
         if 'class_weights' in weights:
             config['class_weights'] = weights['class_weights']
-        # You can add other update rules here
+        # Add more updates if needed
 
         # Instantiate model
         model = create_model(args.model_name, config)
 
-        # Ensure output directories exist
+        # Ensure output dirs
         os.makedirs(os.path.dirname(args.model_out), exist_ok=True)
         os.makedirs(os.path.dirname(args.config_updated), exist_ok=True)
 
-        # Save model and updated config
+        # Save outputs
         torch.save(model.state_dict(), args.model_out)
         with open(args.config_updated, "w") as f:
             json.dump(config, f, indent=2)
+
         print(f"Model saved to {args.model_out}")
         print(f"Updated config saved to {args.config_updated}")
 
     args:
       - --weights_json
       - {inputPath: weights_json}
-      - --config_json
-      - {inputPath: config_json}
+      - --config_str
+      - {inputValue: config_str}
       - --model_name
       - {inputValue: model_name}
       - --model_out
