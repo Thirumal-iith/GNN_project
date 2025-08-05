@@ -2,12 +2,9 @@ name: Load Elliptic Bitcoin Dataset
 description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
 
 outputs:
-  - {
-      name: output_path,
-      type: String,
-      description: "Output .pt file path",
-      path: "{output_path}"
-    }
+  - name: output_path
+    type: String
+    description: Output .pt file path
 
 implementation:
   container:
@@ -26,9 +23,9 @@ implementation:
         parser.add_argument('--output_path', type=str, required=True)
         args = parser.parse_args()
 
-        root_path = '/tmp/elliptic'  # Use a guaranteed writable directory!
+        root_path = '/tmp/elliptic'
         os.makedirs(root_path, exist_ok=True)
-        # Make sure output directory exists
+
         outdir = os.path.dirname(args.output_path)
         if outdir:
             os.makedirs(outdir, exist_ok=True)
