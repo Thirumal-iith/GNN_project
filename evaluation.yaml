@@ -37,7 +37,8 @@ implementation:
         # Load inputs
         model = torch.load(args.trained_model)
         data = torch.load(args.data)
-        config = json.loads(args.config)
+        with open(args.config) as f:
+            config = json.load(f)
 
         # Model Evaluation
         eval_metrics = model.eval_step(data, data.test_mask)
@@ -78,6 +79,6 @@ implementation:
       - --data
       - {inputPath: data_path}
       - --config
-      - {inputValue: config}  # ✅ FIXED HERE
+      - {inputPath: config}
       - --metrics
       - {outputPath: metrics}
