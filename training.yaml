@@ -49,12 +49,12 @@ implementation:
         epochs = config.get('epochs', getattr(model, 'epochs', 10))
 
         # Train the model
-        print("--- Starting Model Training ---")
+        print("Starting Model Training")
         for epoch in range(epochs):
             loss = model.train_step(data, data.train_mask)
             if epoch % 10 == 0:
                 print(f"Epoch {epoch:03d} | Loss: {loss:.4f}")
-        print("--- Finished Model Training ---")
+        print("Finished Model Training")
 
         # Save trained model
         print("Saving trained model...")
