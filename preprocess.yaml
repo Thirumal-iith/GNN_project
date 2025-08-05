@@ -2,11 +2,11 @@ name: Preprocess Elliptic Data
 description: Analyzes class distribution and outputs alpha & class weights as JSON.
 
 inputs:
-  - {name: input_path, type: String}  # input .pt data file
-
+  - name: input_path1
+    type: String
 outputs:
-  - {name: weights_out, type: String, description: "Class/focal weights as JSON"}  # weights.json
-
+  - name: weights_out1
+    type: String
 implementation:
   container:
     image: python:3.9
@@ -60,7 +60,7 @@ implementation:
         print(f"Saved weights to {args.weights_out}")
 
     args:
-      - --input_path
-      - {inputPath: input_path}
-      - --weights_out
-      - {outputPath: weights_out}
+      - --input_path1
+      - {inputPath: input_path1}
+      - --weights_out1
+      - {outputPath: weights_out1}
