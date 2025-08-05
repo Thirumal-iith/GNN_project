@@ -1,14 +1,11 @@
-name: Evaluate TGCN Model
-description: Loads trained TGCN model and data, evaluates accuracy & metrics, saves as JSON report.
-
+name: Evaluate Model
+description: Evaluates the trained model and generates performance metrics.
 inputs:
-  - {name: data_path, type: String, description: "Processed data .pt file (from load_data brick)"}
-  - {name: config_file, type: Json, description: "Config JSON file (from build_model brick)"}
-  - {name: model_path, type: Model, description: "Trained model weights (from training brick)"}
-
+  - {name: trained_model, type: Model}
+  - {name: data_path, type: String}
+  - {name: config, type: Json}
 outputs:
-  - {name: metrics_out, type: Metrics, description: "Evaluation metrics JSON report", path: "{metrics_out}"}
-
+  - {name: metrics, type: Metrics}
 implementation:
   container:
     image: python:3.9
@@ -24,29 +21,30 @@ implementation:
       - -c
       - |
         import torch
-        from tgcn_model import TGCN
         import argparse
+        import pickle
         import json
-        import os
         from sklearn.metrics import classification_report
 
+        # Parse arguments
         parser = argparse.ArgumentParser()
-        parser.add_argument('--data_path', type=str, required=True)
-        parser.add_argument('--config_file', type=str, required=True)
-        parser.add_argument('--model_path', type=str, required=True)
-        parser.add_argument('--metrics_out', type=str, required=True)
+        parser.add_argument('--trained_model', type=str, required=True)
+        parser.add_argument('--data', type=str, required=True)
+        parser.add_argument('--config', type=str, required=True)
+        parser.add_argument('--metrics', type=str, required=True)
         args = parser.parse_args()
 
-        os.makedirs(os.path.dirname(args.metrics_out), exist_ok=True)
-
-        data = torch.load(args.data_path)
-        with open(args.config_file) as f:
+        # Load inputs
+        model = torch.load(args.trained_model)
+        data = torch.load(args.data)
+        with open(args.config) as f:
             config = json.load(f)
 
-        model = TGCN(config)
-        model.load_state_dict(torch.load(args.model_path))
-        model.eval()
+        # Model Evaluation
+        eval_metrics = model.eval_step(data, data.test_mask)
 
+        # Detailed Report
+        model.eval()
         with torch.no_grad():
             out = model.predict(data)
             pred = out.argmax(dim=1)
@@ -56,22 +54,31 @@ implementation:
             test_pred_known = test_pred[known_mask]
             test_true_known = test_true[known_mask]
             report = classification_report(
-                test_true_known, test_pred_known,
+                test_true_known,
+                test_pred_known,
                 target_names=['Licit', 'Illicit'],
-                digits=4, output_dict=True
+                labels=[0, 1],
+                digits=4,
+                output_dict=True
             )
-            print(report)
 
-        with open(args.metrics_out, 'w') as f:
-            json.dump(report, f)
-        print(f"Saved evaluation metrics to {args.metrics_out}")
+        # Prepare metrics output
+        metrics_output = {
+            'test_accuracy': eval_metrics['accuracy'],
+            'classification_report': report,
+            'test_predictions': test_pred_known.tolist(),
+            'test_true_labels': test_true_known.tolist()
+        }
 
+        # Save metrics
+        with open(args.metrics, 'w') as f:
+            json.dump(metrics_output, f, indent=2)
     args:
-      - --data_path
+      - --trained_model
+      - {inputPath: trained_model}
+      - --data
       - {inputPath: data_path}
-      - --config_file
-      - {inputPath: config_file}
-      - --model_path
-      - {inputPath: model_path}
-      - --metrics_out
-      - {outputPath: metrics_out}
+      - --config
+      - {inputPath: config}
+      - --metrics
+      - {outputPath: metrics}
