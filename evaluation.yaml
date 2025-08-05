@@ -1,11 +1,14 @@
 name: Evaluate Model
 description: Evaluates the trained model and generates performance metrics.
+
 inputs:
   - {name: trained_model, type: Model}
   - {name: data_path, type: String}
   - {name: config, type: Json}
+
 outputs:
   - {name: metrics, type: Metrics}
+
 implementation:
   container:
     image: python:3.9
@@ -22,11 +25,9 @@ implementation:
       - |
         import torch
         import argparse
-        import pickle
         import json
         from sklearn.metrics import classification_report
 
-        # Parse arguments
         parser = argparse.ArgumentParser()
         parser.add_argument('--trained_model', type=str, required=True)
         parser.add_argument('--data', type=str, required=True)
@@ -34,16 +35,13 @@ implementation:
         parser.add_argument('--metrics', type=str, required=True)
         args = parser.parse_args()
 
-        # Load inputs
         model = torch.load(args.trained_model)
         data = torch.load(args.data)
         with open(args.config) as f:
             config = json.load(f)
 
-        # Model Evaluation
         eval_metrics = model.eval_step(data, data.test_mask)
 
-        # Detailed Report
         model.eval()
         with torch.no_grad():
             out = model.predict(data)
@@ -62,7 +60,6 @@ implementation:
                 output_dict=True
             )
 
-        # Prepare metrics output
         metrics_output = {
             'test_accuracy': eval_metrics['accuracy'],
             'classification_report': report,
@@ -70,9 +67,9 @@ implementation:
             'test_true_labels': test_true_known.tolist()
         }
 
-        # Save metrics
         with open(args.metrics, 'w') as f:
             json.dump(metrics_output, f, indent=2)
+
     args:
       - --trained_model
       - {inputPath: trained_model}
