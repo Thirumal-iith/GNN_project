@@ -7,8 +7,8 @@ inputs:
   - { name: model_name, type: String, description: "Name of the model to instantiate (e.g., tgcn, ffnetwork)" }
 
 outputs:
-  - { name: model_out, type: Model, description: "Path to save the model weights", path: "{model_out}" }
-  - { name: config_updated, type: Json, description: "Updated config dict", path: "{config_updated}" }
+  - { name: model_out, type: Model, description: "Model weights (torch saved state_dict)" }
+  - { name: config_updated, type: Json, description: "Updated config as JSON" }
 
 implementation:
   container:
@@ -59,7 +59,6 @@ implementation:
             config['focal_loss_alpha'] = weights['focal_loss_alpha']
         if 'class_weights' in weights:
             config['class_weights'] = weights['class_weights']
-        # Add more updates if needed
 
         # Instantiate model
         model = create_model(args.model_name, config)
