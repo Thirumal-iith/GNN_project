@@ -23,15 +23,15 @@ implementation:
         parser.add_argument('--output_path', type=str, required=True)
         args = parser.parse_args()
 
-        root_path = '/tmp/elliptic'
-        os.makedirs(root_path, exist_ok=True)
+        # Automatically select default cache location
+        dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
+        data = dataset[0]
 
+        # Ensure output directory exists
         outdir = os.path.dirname(args.output_path)
         if outdir:
             os.makedirs(outdir, exist_ok=True)
 
-        dataset = EllipticBitcoinDataset(root=root_path)
-        data = dataset[0]
         torch.save(data, args.output_path)
         print(f"Saved raw data to {args.output_path}")
 
