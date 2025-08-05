@@ -5,7 +5,7 @@ inputs:
   - {name: input_path, type: String}  # input .pt data file
 
 outputs:
-  - {name: weights_out, type: Json, description: "Class/focal weights as JSON"}  # weights.json
+  - {name: weights_out, type: String, description: "Class/focal weights as JSON"}  # weights.json
 
 implementation:
   container:
