@@ -79,7 +79,7 @@ implementation:
       - --weights_json
       - {inputPath: weights_json}
       - --config_str
-      - {inputValue: config_str}
+      - {inputPath: config_str}
       - --model_name
       - {inputValue: model_name}
       - --model_out
