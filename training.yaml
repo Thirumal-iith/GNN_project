@@ -1,11 +1,12 @@
 name: Train Model
 description: Trains the model using provided data and config parameters.
 inputs:
-  - {name: data_path, type: String}
-  - {name: model, type: Model}
-  - {name: config, type: Json}
+  - {name: data_path, type: String}          # Graph data object
+  - {name: model, type: Model}               # TGCN/GCN model from build model brick
+  - {name: config, type: Json}               # Training configuration (epochs, etc.)
 outputs:
-  - {name: trained_model, type: Model}
+  - {name: trained_model, type: Model}       # Trained model object
+
 implementation:
   container:
     image: python:3.9
@@ -13,45 +14,58 @@ implementation:
       - sh
       - -c
       - |
-        set -e
-        echo "Installing dependencies..."
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric || \
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
+        exec "$0" "$@"
+      - python3
+      - -u
+      - -c
+      - |
+        import torch
+        import argparse
+        import pickle
+        import json
 
-        echo "Running training script..."
-        python3 -u -c "
-import torch
-import argparse
-import pickle
-import json
+        # Parse arguments
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--data_path', type=str, required=True)
+        parser.add_argument('--model', type=str, required=True)
+        parser.add_argument('--config', type=str, required=True)
+        parser.add_argument('--trained_model', type=str, required=True)
+        args = parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--data_path', type=str, required=True)
-parser.add_argument('--model', type=str, required=True)
-parser.add_argument('--config', type=str, required=True)
-parser.add_argument('--trained_model', type=str, required=True)
-args = parser.parse_args()
+        # Load data
+        print("Loading data...")
+        data = torch.load(args.data_path)
 
-print('Loading data...')
-data = torch.load(args.data_path)
+        print("Loading model...")
+        model = torch.load(args.model)
 
-print('Loading model...')
-model = torch.load(args.model)
+        print("Loading config...")
+        with open(args.config) as f:
+            config = json.load(f)
 
-print('Loading config...')
-with open(args.config) as f:
-    config = json.load(f)
+        # Get number of epochs
+        epochs = config.get('epochs', getattr(model, 'epochs', 10))
 
-epochs = config.get('epochs', getattr(model, 'epochs', 10))
+        # Train the model
+        print("--- Starting Model Training ---")
+        for epoch in range(epochs):
+            loss = model.train_step(data, data.train_mask)
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch:03d} | Loss: {loss:.4f}")
+        print("--- Finished Model Training ---")
 
-print('--- Starting Model Training ---')
-for epoch in range(epochs):
-    loss = model.train_step(data, data.train_mask)
-    if epoch % 10 == 0:
-        print(f'Epoch {epoch:03d} | Loss: {loss:.4f}')
-print('--- Finished Model Training ---')
-
-print('Saving trained model...')
-torch.save(model, args.trained_model)
-print(f'Saved trained model to {args.trained_model}')
-" --data_path {inputPath: data_path} --model {inputPath: model} --config {inputPath: config} --trained_model {outputPath: trained_model}
+        # Save trained model
+        print("Saving trained model...")
+        torch.save(model, args.trained_model)
+        print(f"Saved trained model to {args.trained_model}")
+    args:
+      - --data_path
+      - {inputPath: data_path}
+      - --model
+      - {inputPath: model}
+      - --config
+      - {inputPath: config}
+      - --trained_model
+      - {outputPath: trained_model}
