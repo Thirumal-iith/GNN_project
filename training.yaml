@@ -1,14 +1,11 @@
-name: Train TGCN Model with Dynamic Import
-description: Loads data & config, dynamically imports TGCN model, trains, and saves trained weights.
-
+name: Train Model
+description: Trains the model using provided data and config parameters.
 inputs:
-  - {name: data_path, type: String, description: "Processed data .pt file (from load_data brick)"}
-  - {name: config_file, type: Json, description: "Config JSON file (from build_model brick)"}
-  - {name: model_path, type: Model, description: "Python file defining TGCN model (from build_model brick)"}
-
+  - {name: data_path, type: String}
+  - {name: model, type: Model}
+  - {name: config, type: Json}
 outputs:
-  - {name: train_model, type: Model, description: "Trained model weights", path: "{train_model}"}
-
+  - {name: trained_model, type: Model}
 implementation:
   container:
     image: python:3.9
@@ -16,56 +13,45 @@ implementation:
       - sh
       - -c
       - |
+        set -e
+        echo "Installing dependencies..."
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric || \
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch || \
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
-        exec "$0" "$@"
-      - python3
-      - -u
-      - -c
-      - |
-        import torch
-        import argparse
-        import importlib.util
-        import os
-        import json
 
-        def dynamic_import(model_path, class_name='TGCN'):
-            spec = importlib.util.spec_from_file_location("tgcn_module", model_path)
-            tgcn_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(tgcn_module)
-            return getattr(tgcn_module, class_name)
+        echo "Running training script..."
+        python3 -u -c "
+import torch
+import argparse
+import pickle
+import json
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--data_path', type=str, required=True)
-        parser.add_argument('--config_file', type=str, required=True)
-        parser.add_argument('--model_path', type=str, required=True)
-        parser.add_argument('--train_model', type=str, required=True)
-        args = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('--data_path', type=str, required=True)
+parser.add_argument('--model', type=str, required=True)
+parser.add_argument('--config', type=str, required=True)
+parser.add_argument('--trained_model', type=str, required=True)
+args = parser.parse_args()
 
-        os.makedirs(os.path.dirname(args.train_model), exist_ok=True)
+print('Loading data...')
+data = torch.load(args.data_path)
 
-        data = torch.load(args.data_path)
-        with open(args.config_file) as f:
-            config = json.load(f)
-        TGCN = dynamic_import(args.model_path, class_name='TGCN')
-        model = TGCN(config)
+print('Loading model...')
+model = torch.load(args.model)
 
-        print("Starting training...")
-        for epoch in range(config.get('epochs', 50)):
-            loss = model.train_step(data, data.train_mask)
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch:03d} | Loss: {loss:.4f}")
+print('Loading config...')
+with open(args.config) as f:
+    config = json.load(f)
 
-        torch.save(model.state_dict(), args.train_model)
-        print(f"Saved trained model to {args.train_model}")
+epochs = config.get('epochs', getattr(model, 'epochs', 10))
 
-    args:
-      - --data_path
-      - {inputValue: data_path}
-      - --config_file
-      - {inputPath: config_file}
-      - --model_path
-      - {inputPath: model_path}
-      - --train_model
-      - {outputPath: train_model}
+print('--- Starting Model Training ---')
+for epoch in range(epochs):
+    loss = model.train_step(data, data.train_mask)
+    if epoch % 10 == 0:
+        print(f'Epoch {epoch:03d} | Loss: {loss:.4f}')
+print('--- Finished Model Training ---')
+
+print('Saving trained model...')
+torch.save(model, args.trained_model)
+print(f'Saved trained model to {args.trained_model}')
+" --data_path {inputPath: data_path} --model {inputPath: model} --config {inputPath: config} --trained_model {outputPath: trained_model}
