@@ -2,7 +2,7 @@ name: Load Elliptic Bitcoin Dataset
 description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
 
 outputs:
-  - name: output_path
+  - name: outputpath1
     type: String
     description: Output .pt file path
 
@@ -36,5 +36,5 @@ implementation:
         print(f"Saved raw data to {args.output_path}")
 
     args:
-      - --output_path
-      - {outputPath: output_path}
+      - --outputpath1
+      - {outputPath: outputpath1}
