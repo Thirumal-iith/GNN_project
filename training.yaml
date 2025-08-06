@@ -1,7 +1,7 @@
 name: Train Model
 description: Trains the model using provided data and config parameters.
 inputs:
-  - {name: data_path, type: String}          # Graph data object
+  - {name: data_pth, type: String}           # Graph data object
   - {name: model, type: Model}               # TGCN/GCN model from build model brick
   - {name: config, type: Json}               # Training configuration (epochs, etc.)
 outputs:
@@ -62,7 +62,7 @@ implementation:
         print(f"Saved trained model to {args.trained_model}")
     args:
       - --data_path
-      - {inputPath: data_path}
+      - {inputPath: data_pth}
       - --model
       - {inputPath: model}
       - --config
