@@ -2,7 +2,7 @@ name: Evaluate Model
 description: Evaluates the trained model and generates performance metrics.
 inputs:
   - {name: trained_model, type: Model}
-  - {name: data_path, type: String}
+  - {name: data_pth, type: String}
   - {name: config, type: Json}
 outputs:
   - {name: metrics, type: Metrics}
@@ -77,7 +77,7 @@ implementation:
       - --trained_model
       - {inputPath: trained_model}
       - --data
-      - {inputPath: data_path}
+      - {inputPath: data_pth}
       - --config
       - {inputPath: config}
       - --metrics
