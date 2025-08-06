@@ -2,7 +2,7 @@ name: Build Model
 description: Instantiates a model using create_model from the NeSy-Factory-Models GitHub repo, updates config with weights, and saves both model and updated config.
 
 inputs:
-  - { name: weights_json, type: Json, description: "JSON with weight info (e.g., alpha, class_weights)" }
+  - { name: weight, type: String, description: "Path to JSON with weight info (e.g., alpha, class_weights)" }
   - { name: config_str, type: String, description: "Model config as JSON string" }
   - { name: model_name, type: String, description: "Name of the model to instantiate (e.g., tgcn, ffnetwork)" }
 
@@ -41,7 +41,7 @@ implementation:
         from nesy_factory_models.GNNs import create_model
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--weights_json', type=str, required=True)
+        parser.add_argument('--weight', type=str, required=True)
         parser.add_argument('--config_str', type=str, required=True)
         parser.add_argument('--model_name', type=str, required=True)
         parser.add_argument('--model_out', type=str, required=True)
@@ -49,7 +49,7 @@ implementation:
         args = parser.parse_args()
 
         # Load inputs
-        with open(args.weights_json, "r") as f:
+        with open(args.weight, "r") as f:
             weights = json.load(f)
 
         config = json.loads(args.config_str)
@@ -76,8 +76,8 @@ implementation:
         print(f"Updated config saved to {args.config_updated}")
 
     args:
-      - --weights_json
-      - {inputPath: weights_json}
+      - --weight
+      - {inputPath: weight}
       - --config_str
       - {inputPath: config_str}
       - --model_name
