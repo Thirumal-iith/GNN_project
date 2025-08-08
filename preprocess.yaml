@@ -19,12 +19,13 @@ implementation:
         # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
-        # Run preprocessing script, pass args as $1 and $2
-        python3 -u - --input_pth "$1" --weights_out1 "$2" <<'PYCODE'
+        # Create a temporary Python script with the arguments hardcoded
+        cat > /tmp/preprocess_script.py << 'SCRIPT_EOF'
         import torch
         import argparse
         import os
         import json
+        import sys
 
         def analyze_class_distribution(data_path):
             data = torch.load(data_path)
@@ -45,23 +46,28 @@ implementation:
 
             return alpha_weights, class_weights
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--input_pth', type=str, required=True)
-        parser.add_argument('--weights_out1', type=str, required=True)
-        args = parser.parse_args()
+        # Get arguments from command line
+        input_path = sys.argv[1]
+        output_path = sys.argv[2]
 
-        out_dir = os.path.dirname(args.weights_out1)
+        print(f"Input path: {input_path}")
+        print(f"Output path: {output_path}")
+
+        # Create output directory safely
+        out_dir = os.path.dirname(output_path)
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
 
-        alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
+        alpha_weights, class_weights = analyze_class_distribution(input_path)
 
         weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
-        with open(args.weights_out1, 'w') as f:
+        with open(output_path, 'w') as f:
             json.dump(weights_dict, f)
 
-        print(f"✅ Saved weights to {args.weights_out1}")
-        PYCODE
-    args:
+        print(f"✅ Saved weights to {output_path}")
+        SCRIPT_EOF
+
+        # Run the script with arguments
+        python3 /tmp/preprocess_script.py "$0" "$1"
       - {inputPath: input_pth}
       - {outputPath: weights_out1}
