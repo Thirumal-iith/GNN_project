@@ -16,52 +16,55 @@ implementation:
       - -c
       - |
         set -e
-        # Install matching CPU wheels; fall back to --user if needed
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --index-url https://download.pytorch.org/whl/cpu torch==2.0.1 || \
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric || \
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric --user
+        # Install dependencies
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
-        # Run inline Python, wiring KFP placeholders as $0 (input_pth) and $1 (weights_out1)
-        python3 -u - --input_pth "$0" --weights_out1 "$1" <<'PYCODE'
-import torch
-import argparse
-import os
-import json
+        # Run preprocessing script
+        python3 -u - <<'PYCODE'
+        import torch
+        import argparse
+        import os
+        import json
 
-def analyze_class_distribution(data_path):
-    data = torch.load(data_path)
-    train_labels = data.y[data.train_mask]
-    known_mask = train_labels != 2
-    known_labels = train_labels[known_mask]
-    licit_count = (known_labels == 0).sum().item()
-    illicit_count = (known_labels == 1).sum().item()
-    total_known = len(known_labels)
+        def analyze_class_distribution(data_path):
+            data = torch.load(data_path)
+            train_labels = data.y[data.train_mask]
+            known_mask = train_labels != 2
+            known_labels = train_labels[known_mask]
+            licit_count = (known_labels == 0).sum().item()
+            illicit_count = (known_labels == 1).sum().item()
+            total_known = len(known_labels)
 
-    ce_weight_licit = total_known / (2 * licit_count) if licit_count > 0 else 1
-    ce_weight_illicit = total_known / (2 * illicit_count) if illicit_count > 0 else 1
-    class_weights = [ce_weight_licit, ce_weight_illicit, 0.0]
+            ce_weight_licit = total_known / (2 * licit_count) if licit_count > 0 else 1
+            ce_weight_illicit = total_known / (2 * illicit_count) if illicit_count > 0 else 1
+            class_weights = [ce_weight_licit, ce_weight_illicit, 0.0]
 
-    alpha_licit = illicit_count / total_known if total_known > 0 else 0.0
-    alpha_illicit = licit_count / total_known if total_known > 0 else 0.0
-    alpha_weights = [alpha_licit, alpha_illicit, 0.0]
+            alpha_licit = illicit_count / total_known
+            alpha_illicit = licit_count / total_known
+            alpha_weights = [alpha_licit, alpha_illicit, 0.0]
 
-    return alpha_weights, class_weights
+            return alpha_weights, class_weights
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--input_pth', type=str, required=True)
-parser.add_argument('--weights_out1', type=str, required=True)
-args = parser.parse_args()
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--input_pth', type=str, required=True)
+        parser.add_argument('--weights_out1', type=str, required=True)
+        args = parser.parse_args()
 
-out_dir = os.path.dirname(args.weights_out1)
-if out_dir:
-    os.makedirs(out_dir, exist_ok=True)
+        # Create output directory safely
+        out_dir = os.path.dirname(args.weights_out1)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
 
-alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
-weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
-with open(args.weights_out1, 'w') as f:
-    json.dump(weights_dict, f)
-print(f"Saved weights to {args.weights_out1}")
-PYCODE
+        alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
+
+        weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
+        with open(args.weights_out1, 'w') as f:
+            json.dump(weights_dict, f)
+
+        print(f"✅ Saved weights to {args.weights_out1}")
+        PYCODE
+    args:
+      - --input_pth
       - {inputPath: input_pth}
+      - --weights_out1
       - {outputPath: weights_out1}
