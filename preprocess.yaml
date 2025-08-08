@@ -43,24 +43,24 @@ implementation:
             return alpha_weights, class_weights
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--input_path', type=str, required=True)
-        parser.add_argument('--weights_out', type=str, required=True)
+        parser.add_argument('--input_pth', type=str, required=True)
+        parser.add_argument('--weights_out1', type=str, required=True)
         args = parser.parse_args()
 
-        os.makedirs(os.path.dirname(args.weights_out), exist_ok=True)
+        os.makedirs(os.path.dirname(args.weights_out1), exist_ok=True)
 
-        data = torch.load(args.input_path)
+        data = torch.load(args.input_pth)
         alpha_weights, class_weights = analyze_class_distribution(data)
 
         # Save weights
         weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
-        with open(args.weights_out, 'w') as f:
+        with open(args.weights_out1, 'w') as f:
             json.dump(weights_dict, f)
 
-        print(f"Saved weights to {args.weights_out}")
+        print(f"Saved weights to {args.weights_out1}")
 
     args:
-      - --input_path
+      - --input_pth
       - {inputPath: input_pth}
-      - --weights_out
+      - --weights_out1
       - {outputPath: weights_out1}
