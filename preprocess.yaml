@@ -7,21 +7,18 @@ inputs:
 outputs:
   - name: weights_out1
     type: String
+
 implementation:
   container:
     image: python:3.9
     command:
       - sh
-      - -c
+      - -ec
       - |
+        set -e
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch || \
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
-        exec "$0" "$@"
-      - python3
-      - -u
-      - -c
-      - |
+
+        python3 -u - <<'PYCODE'
         import torch
         import argparse
         import os
@@ -52,13 +49,12 @@ implementation:
 
         alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
 
-        # Save weights
         weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
         with open(args.weights_out1, 'w') as f:
             json.dump(weights_dict, f)
 
         print(f"Saved weights to {args.weights_out1}")
-
+        PYCODE
     args:
       - --input_pth
       - {inputPath: input_pth}
