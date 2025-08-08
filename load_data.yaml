@@ -20,7 +20,7 @@ implementation:
         import os
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--output_path', type=str, required=True)
+        parser.add_argument('--outputpath1', type=str, required=True)
         args = parser.parse_args()
 
         # Automatically select default cache location
@@ -28,12 +28,12 @@ implementation:
         data = dataset[0]
 
         # Ensure output directory exists
-        outdir = os.path.dirname(args.output_path)
+        outdir = os.path.dirname(args.outputpath1)
         if outdir:
             os.makedirs(outdir, exist_ok=True)
 
-        torch.save(data, args.output_path)
-        print(f"Saved raw data to {args.output_path}")
+        torch.save(data, args.outputpath1)
+        print(f"Saved raw data to {args.outputpath1}")
 
     args:
       - --outputpath1
