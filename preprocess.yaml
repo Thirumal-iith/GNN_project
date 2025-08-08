@@ -27,7 +27,8 @@ implementation:
         import os
         import json
 
-        def analyze_class_distribution(data):
+        def analyze_class_distribution(data_path):
+            data = torch.load(data_path)
             train_labels = data.y[data.train_mask]
             known_mask = train_labels != 2
             known_labels = train_labels[known_mask]
@@ -49,8 +50,7 @@ implementation:
 
         os.makedirs(os.path.dirname(args.weights_out1), exist_ok=True)
 
-        data = torch.load(args.input_pth)
-        alpha_weights, class_weights = analyze_class_distribution(data)
+        alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
 
         # Save weights
         weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
