@@ -19,8 +19,8 @@ implementation:
         # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
-        # Run preprocessing script
-        python3 -u - <<'PYCODE'
+        # Run preprocessing script, pass args as $1 and $2
+        python3 -u - --input_pth "$1" --weights_out1 "$2" <<'PYCODE'
         import torch
         import argparse
         import os
@@ -39,8 +39,8 @@ implementation:
             ce_weight_illicit = total_known / (2 * illicit_count) if illicit_count > 0 else 1
             class_weights = [ce_weight_licit, ce_weight_illicit, 0.0]
 
-            alpha_licit = illicit_count / total_known
-            alpha_illicit = licit_count / total_known
+            alpha_licit = illicit_count / total_known if total_known > 0 else 0.0
+            alpha_illicit = licit_count / total_known if total_known > 0 else 0.0
             alpha_weights = [alpha_licit, alpha_illicit, 0.0]
 
             return alpha_weights, class_weights
@@ -50,7 +50,6 @@ implementation:
         parser.add_argument('--weights_out1', type=str, required=True)
         args = parser.parse_args()
 
-        # Create output directory safely
         out_dir = os.path.dirname(args.weights_out1)
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
@@ -64,7 +63,5 @@ implementation:
         print(f"✅ Saved weights to {args.weights_out1}")
         PYCODE
     args:
-      - --input_pth
       - {inputPath: input_pth}
-      - --weights_out1
       - {outputPath: weights_out1}
