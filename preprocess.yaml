@@ -35,15 +35,15 @@ implementation:
             licit_count = (known_labels == 0).sum().item()
             illicit_count = (known_labels == 1).sum().item()
             total_known = len(known_labels)
-
+        
             ce_weight_licit = total_known / (2 * licit_count) if licit_count > 0 else 1
             ce_weight_illicit = total_known / (2 * illicit_count) if illicit_count > 0 else 1
             class_weights = [ce_weight_licit, ce_weight_illicit, 0.0]
-
+        
             alpha_licit = illicit_count / total_known if total_known > 0 else 0.0
             alpha_illicit = licit_count / total_known if total_known > 0 else 0.0
             alpha_weights = [alpha_licit, alpha_illicit, 0.0]
-
+        
             return alpha_weights, class_weights
 
         # Get arguments from command line
