@@ -19,7 +19,7 @@ implementation:
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
 
         # Run the Python script
-        python3 -u - <<'PYCODE'
+        python3 -u - --outputpath1 "$0" <<'PYCODE'
         import torch
         from torch_geometric.datasets import EllipticBitcoinDataset
         import argparse
@@ -29,11 +29,9 @@ implementation:
         parser.add_argument('--outputpath1', type=str, required=True)
         args = parser.parse_args()
 
-        # Automatically select default cache location
         dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
         data = dataset[0]
 
-        # Ensure output directory exists
         outdir = os.path.dirname(args.outputpath1)
         if outdir:
             os.makedirs(outdir, exist_ok=True)
@@ -41,5 +39,4 @@ implementation:
         torch.save(data, args.outputpath1)
         print(f"Saved raw data to {args.outputpath1}")
         PYCODE
-      - --outputpath1
       - {outputPath: outputpath1}
