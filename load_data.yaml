@@ -1,5 +1,5 @@
 name: Load Elliptic Bitcoin Dataset
-description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
+description: Loads the EllipticBitcoinDataset and saves it as a PyTorch `.pt` file.
 
 outputs:
   - name: outputpath1
@@ -14,21 +14,21 @@ implementation:
       - -c
       - |
         # Install dependencies
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch || \
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torchvision torchaudio --user
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric --user
 
-        # Run the Python script
-        python3 -u - --outputpath1 "$0" <<'PYCODE'
-        import torch
-        from torch_geometric.datasets import EllipticBitcoinDataset
+        # Run Python script
+        python3 -u - <<'PYCODE'
         import argparse
         import os
+        import torch
+        from torch_geometric.datasets import EllipticBitcoinDataset
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--outputpath1', type=str, required=True)
         args = parser.parse_args()
 
+        print(f"[INFO] Saving dataset to: {args.outputpath1}")
         dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
         data = dataset[0]
 
@@ -37,6 +37,8 @@ implementation:
             os.makedirs(outdir, exist_ok=True)
 
         torch.save(data, args.outputpath1)
-        print(f"Saved raw data to {args.outputpath1}")
+        print(f"[SUCCESS] Saved raw data to {args.outputpath1}")
         PYCODE
+    args:
+      - --outputpath1
       - {outputPath: outputpath1}
