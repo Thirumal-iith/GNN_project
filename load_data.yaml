@@ -9,22 +9,25 @@ outputs:
 implementation:
   container:
     image: python:3.9
+    # The command is now just the script executor
     command:
       - sh
       - -c
       - |
+        # The first argument to this script ($1) will be the output path from 'args' below
+        OUTPUT_PATH="$1"
+
         # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
-        # Run the Python script, passing the output path placeholder directly.
-        # Kubeflow will replace {outputPath: outputpath1} with the actual file path.
-        python3 -u - --outputpath1 "{outputPath: outputpath1}" <<'PYCODE'
+        # Run the Python script, passing the output path from the shell variable
+        python3 -u - --outputpath1 "$OUTPUT_PATH" <<'PYCODE'
         import torch
         from torch_geometric.datasets import EllipticBitcoinDataset
         import argparse
         import os
 
-        # Set up argument parsing - this is now correctly receiving the argument
+        # Set up argument parsing
         parser = argparse.ArgumentParser()
         parser.add_argument('--outputpath1', type=str, required=True, help='Path to save the output .pt file.')
         args = parser.parse_args()
@@ -45,3 +48,7 @@ implementation:
         torch.save(data, args.outputpath1)
         print(f"Success! Saved data to {args.outputpath1}")
         PYCODE
+
+    # The output placeholder is now cleanly defined in the 'args' section
+    args:
+      - {outputPath: outputpath1}
