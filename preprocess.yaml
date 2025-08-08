@@ -13,11 +13,13 @@ implementation:
     image: python:3.9
     command:
       - sh
-      - -ec
+      - -c
       - |
         set -e
+        # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
+        # Run preprocessing script
         python3 -u - <<'PYCODE'
         import torch
         import argparse
@@ -32,12 +34,15 @@ implementation:
             licit_count = (known_labels == 0).sum().item()
             illicit_count = (known_labels == 1).sum().item()
             total_known = len(known_labels)
+
             ce_weight_licit = total_known / (2 * licit_count) if licit_count > 0 else 1
             ce_weight_illicit = total_known / (2 * illicit_count) if illicit_count > 0 else 1
             class_weights = [ce_weight_licit, ce_weight_illicit, 0.0]
+
             alpha_licit = illicit_count / total_known
             alpha_illicit = licit_count / total_known
             alpha_weights = [alpha_licit, alpha_illicit, 0.0]
+
             return alpha_weights, class_weights
 
         parser = argparse.ArgumentParser()
@@ -45,7 +50,10 @@ implementation:
         parser.add_argument('--weights_out1', type=str, required=True)
         args = parser.parse_args()
 
-        os.makedirs(os.path.dirname(args.weights_out1), exist_ok=True)
+        # Create output directory safely
+        out_dir = os.path.dirname(args.weights_out1)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
 
         alpha_weights, class_weights = analyze_class_distribution(args.input_pth)
 
@@ -53,7 +61,7 @@ implementation:
         with open(args.weights_out1, 'w') as f:
             json.dump(weights_dict, f)
 
-        print(f"Saved weights to {args.weights_out1}")
+        print(f"✅ Saved weights to {args.weights_out1}")
         PYCODE
     args:
       - --input_pth
