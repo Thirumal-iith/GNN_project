@@ -12,19 +12,22 @@ implementation:
   container:
     image: python:3.9
     command:
-      - sh
-      - -c
+      - python3
+      - -u
+      - -
+    args:
       - |
-        set -e
-        # Install dependencies
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
-
-        # Run preprocessing script
-        python3 -u - <<'PYCODE'
         import torch
         import argparse
         import os
         import json
+        import subprocess
+
+        # Install dependencies first
+        subprocess.check_call([
+            "python3", "-m", "pip", "install", "--quiet",
+            "torch", "torch_geometric", "--user"
+        ])
 
         def analyze_class_distribution(data_path):
             data = torch.load(data_path)
@@ -62,8 +65,7 @@ implementation:
             json.dump(weights_dict, f)
 
         print(f"✅ Saved weights to {args.weights_out1}")
-        PYCODE
-    args:
+    arguments:
       - --input_pth
       - {inputPath: input_pth}
       - --weights_out1
