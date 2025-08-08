@@ -1,5 +1,5 @@
 name: Load Elliptic Bitcoin Dataset
-description: Loads the EllipticBitcoinDataset and saves it as a PyTorch `.pt` file.
+description: Loads the EllipticBitcoinDataset and saves it as a PyTorch .pt file.
 
 outputs:
   - name: outputpath1
@@ -17,8 +17,8 @@ implementation:
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torchvision torchaudio --user
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric --user
 
-        # Run Python script
-        python3 -u - <<'PYCODE'
+        # Run Python script with provided output path
+        python3 -u - --outputpath1 "$0" <<'PYCODE'
         import argparse
         import os
         import torch
@@ -39,6 +39,4 @@ implementation:
         torch.save(data, args.outputpath1)
         print(f"[SUCCESS] Saved raw data to {args.outputpath1}")
         PYCODE
-    args:
-      - --outputpath1
       - {outputPath: outputpath1}
