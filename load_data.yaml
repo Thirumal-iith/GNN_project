@@ -9,46 +9,37 @@ outputs:
 implementation:
   container:
     image: python:3.9
-    # The command is now just the script executor
     command:
       - sh
       - -c
       - |
-        # The first argument to this script ($1) will be the output path from 'args' below
-        OUTPUT_PATH="$1"
-
         # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch || \
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
 
-        # Run the Python script, passing the output path from the shell variable
-        python3 -u - --outputpath1 "$OUTPUT_PATH" <<'PYCODE'
+        # Run the Python script
+        python3 -u - <<'PYCODE'
         import torch
         from torch_geometric.datasets import EllipticBitcoinDataset
         import argparse
         import os
 
-        # Set up argument parsing
         parser = argparse.ArgumentParser()
-        parser.add_argument('--outputpath1', type=str, required=True, help='Path to save the output .pt file.')
+        parser.add_argument('--outputpath1', type=str, required=True)
         args = parser.parse_args()
 
-        print(f"Starting dataset download and processing...")
         # Automatically select default cache location
         dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
         data = dataset[0]
-        print("Dataset loaded successfully.")
 
-        # The path provided by Kubeflow is a file path. We need to create its parent directory.
-        output_dir = os.path.dirname(args.outputpath1)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-            print(f"Created output directory: {output_dir}")
+        # Ensure output directory exists
+        outdir = os.path.dirname(args.outputpath1)
+        if outdir:
+            os.makedirs(outdir, exist_ok=True)
 
-        # Save the processed data object
         torch.save(data, args.outputpath1)
-        print(f"Success! Saved data to {args.outputpath1}")
+        print(f"Saved raw data to {args.outputpath1}")
         PYCODE
-
-    # The output placeholder is now cleanly defined in the 'args' section
-    args:
+      - --outputpath1
       - {outputPath: outputpath1}
