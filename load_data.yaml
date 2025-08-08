@@ -15,7 +15,7 @@ implementation:
       - |
         # Install dependencies
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torchvision torchaudio --user
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric --user
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric pandas --user
 
         # Run Python script with provided output path
         python3 -u - --outputpath1 "$0" <<'PYCODE'
