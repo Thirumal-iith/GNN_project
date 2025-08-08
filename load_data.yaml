@@ -1,10 +1,10 @@
 name: Load Elliptic Bitcoin Dataset
-description: Loads the EllipticBitcoinDataset and saves it as a PyTorch `.pt` data file.
+description: Loads the EllipticBitcoinDataset and saves as a PyTorch data file.
 
 outputs:
   - name: outputpath1
-    type: Path
-    description: Path to save the output `.pt` file
+    type: String
+    description: Output .pt file path
 
 implementation:
   container:
@@ -14,33 +14,34 @@ implementation:
       - -c
       - |
         # Install dependencies
-        python3 -m pip install --quiet --no-cache-dir torch torch_geometric
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
 
-        # Run the Python script
-        python3 -u - "$@" <<'PYCODE'
+        # Run the Python script, passing the output path placeholder directly.
+        # Kubeflow will replace {outputPath: outputpath1} with the actual file path.
+        python3 -u - --outputpath1 "{outputPath: outputpath1}" <<'PYCODE'
         import torch
         from torch_geometric.datasets import EllipticBitcoinDataset
         import argparse
         import os
 
+        # Set up argument parsing - this is now correctly receiving the argument
         parser = argparse.ArgumentParser()
-        parser.add_argument('--outputpath1', type=str, required=True)
+        parser.add_argument('--outputpath1', type=str, required=True, help='Path to save the output .pt file.')
         args = parser.parse_args()
 
-        # Load dataset
+        print(f"Starting dataset download and processing...")
+        # Automatically select default cache location
         dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
         data = dataset[0]
+        print("Dataset loaded successfully.")
 
-        # Ensure output directory exists
-        outdir = os.path.dirname(args.outputpath1)
-        if outdir:
-            os.makedirs(outdir, exist_ok=True)
+        # The path provided by Kubeflow is a file path. We need to create its parent directory.
+        output_dir = os.path.dirname(args.outputpath1)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"Created output directory: {output_dir}")
 
-        # Save dataset
+        # Save the processed data object
         torch.save(data, args.outputpath1)
-        print(f"✅ Saved raw data to {args.outputpath1}")
+        print(f"Success! Saved data to {args.outputpath1}")
         PYCODE
-      - --
-    args:
-      - --outputpath1
-      - {outputPath: outputpath1}
