@@ -17,21 +17,23 @@ implementation:
       - |
         set -e
         # Install dependencies
-        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torch_geometric --user
+        PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch --user
 
-        # Create a temporary Python script with the arguments hardcoded
+        # Create a temporary Python script
         cat > /tmp/preprocess_script.py << 'SCRIPT_EOF'
         import torch
-        import argparse
-        import os
         import json
+        import os
         import sys
 
-        def analyze_class_distribution(data_path):
-            data = torch.load(data_path)
-            train_labels = data.y[data.train_mask]
+        def analyze_class_distribution(data_dict):
+            y = torch.tensor(data_dict["y"])
+            train_mask = torch.tensor(data_dict["train_mask"], dtype=torch.bool)
+
+            train_labels = y[train_mask]
             known_mask = train_labels != 2
             known_labels = train_labels[known_mask]
+
             licit_count = (known_labels == 0).sum().item()
             illicit_count = (known_labels == 1).sum().item()
             total_known = len(known_labels)
@@ -46,28 +48,31 @@ implementation:
         
             return alpha_weights, class_weights
 
-        # Get arguments from command line
-        input_path = sys.argv[1]
+        # Read arguments
+        input_str = sys.argv[1]
         output_path = sys.argv[2]
 
-        print(f"Input path: {input_path}")
-        print(f"Output path: {output_path}")
+        # Parse JSON string into Python dict
+        data_dict = json.loads(input_str)
 
-        # Create output directory safely
+        # Ensure output directory exists
         out_dir = os.path.dirname(output_path)
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
 
-        alpha_weights, class_weights = analyze_class_distribution(input_path)
+        alpha_weights, class_weights = analyze_class_distribution(data_dict)
 
-        weights_dict = {'focal_loss_alpha': alpha_weights, 'class_weights': class_weights}
+        weights_dict = {
+            'focal_loss_alpha': alpha_weights,
+            'class_weights': class_weights
+        }
         with open(output_path, 'w') as f:
             json.dump(weights_dict, f)
 
         print(f"✅ Saved weights to {output_path}")
         SCRIPT_EOF
 
-        # Run the script with arguments
+        # Run script
         python3 /tmp/preprocess_script.py "$0" "$1"
-      - {inputPath: input_pth}
+      - {inputValue: input_pth}
       - {outputPath: weights_out1}
