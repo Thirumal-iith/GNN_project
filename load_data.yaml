@@ -4,7 +4,7 @@ description: Loads the EllipticBitcoinDataset and saves it as a PyTorch .pt file
 outputs:
   - name: outputpath1
     type: String
-    description: Output .pt file path
+    description: Path to saved dataset file (.pt)
 
 implementation:
   container:
@@ -17,8 +17,8 @@ implementation:
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch torchvision torchaudio --user
         PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet torch_geometric pandas --user
 
-        # Run Python script with provided output path
-        python3 -u - --outputpath1 "$0" <<'PYCODE'
+        # Run Python script
+        python3 -u - <<'PYCODE'
         import argparse
         import os
         import torch
@@ -32,11 +32,13 @@ implementation:
         dataset = EllipticBitcoinDataset(root='/tmp/elliptic')
         data = dataset[0]
 
-        outdir = os.path.dirname(args.outputpath1)
-        if outdir:
-            os.makedirs(outdir, exist_ok=True)
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(args.outputpath1), exist_ok=True)
 
+        # Save as a .pt file
         torch.save(data, args.outputpath1)
         print(f"[SUCCESS] Saved raw data to {args.outputpath1}")
         PYCODE
+    args:
+      - --outputpath1
       - {outputPath: outputpath1}
