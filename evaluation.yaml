@@ -1,11 +1,14 @@
 name: Evaluate Model
 description: Evaluates the trained model and generates performance metrics.
+
 inputs:
   - {name: trained_model, type: Model}
   - {name: data_pth, type: String}
-  - {name: config, type: Json}
+  - {name: config, type: String}       # Changed from Json → String
+
 outputs:
   - {name: metrics, type: Metrics}
+
 implementation:
   container:
     image: python:3.9
@@ -22,7 +25,6 @@ implementation:
       - |
         import torch
         import argparse
-        import pickle
         import json
         from sklearn.metrics import classification_report
 
@@ -30,15 +32,19 @@ implementation:
         parser = argparse.ArgumentParser()
         parser.add_argument('--trained_model', type=str, required=True)
         parser.add_argument('--data', type=str, required=True)
-        parser.add_argument('--config', type=str, required=True)
+        parser.add_argument('--config', type=str, required=True)  # JSON string
         parser.add_argument('--metrics', type=str, required=True)
         args = parser.parse_args()
 
         # Load inputs
+        print("Loading trained model...")
         model = torch.load(args.trained_model)
+
+        print("Loading data...")
         data = torch.load(args.data)
-        with open(args.config) as f:
-            config = json.load(f)
+
+        print("Parsing config from string...")
+        config = json.loads(args.config)
 
         # Model Evaluation
         eval_metrics = model.eval_step(data, data.test_mask)
@@ -79,6 +85,6 @@ implementation:
       - --data
       - {inputPath: data_pth}
       - --config
-      - {inputPath: config}
+      - {inputValue: config}      # Changed to inputValue so it's passed as a string
       - --metrics
       - {outputPath: metrics}
