@@ -2,13 +2,13 @@ name: Build Model
 description: Instantiates a model using create_model from the NeSy-Factory-Models GitHub repo, updates config with weights, and saves both model and updated config.
 
 inputs:
-  - { name: weight, type: String, description: "Path to JSON with weight info (e.g., alpha, class_weights)" }
+  - { name: weight, type: String, description: "Weight info as JSON string (e.g., alpha, class_weights)" }
   - { name: config_str, type: String, description: "Model config as JSON string" }
   - { name: model_name, type: String, description: "Name of the model to instantiate (e.g., tgcn, ffnetwork)" }
 
 outputs:
   - { name: model_out, type: Model, description: "Model weights (torch saved state_dict)" }
-  - { name: config_updated, type: Json, description: "Updated config as JSON" }
+  - { name: config_updated, type: String, description: "Updated config as JSON string" }
 
 implementation:
   container:
@@ -41,17 +41,15 @@ implementation:
         from nesy_factory_models.GNNs import create_model
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--weight', type=str, required=True)
-        parser.add_argument('--config_str', type=str, required=True)
+        parser.add_argument('--weight', type=str, required=True)        # JSON string
+        parser.add_argument('--config_str', type=str, required=True)    # JSON string
         parser.add_argument('--model_name', type=str, required=True)
         parser.add_argument('--model_out', type=str, required=True)
-        parser.add_argument('--config_updated', type=str, required=True)
+        parser.add_argument('--config_updated', type=str, required=True)  # String output path
         args = parser.parse_args()
 
-        # Load inputs
-        with open(args.weight, "r") as f:
-            weights = json.load(f)
-
+        # Parse JSON strings directly
+        weights = json.loads(args.weight)
         config = json.loads(args.config_str)
 
         # Update config with weights
@@ -67,19 +65,21 @@ implementation:
         os.makedirs(os.path.dirname(args.model_out), exist_ok=True)
         os.makedirs(os.path.dirname(args.config_updated), exist_ok=True)
 
-        # Save outputs
+        # Save model state_dict
         torch.save(model.state_dict(), args.model_out)
+
+        # Save updated config as a string
+        config_str_out = json.dumps(config, indent=2)
         with open(args.config_updated, "w") as f:
-            json.dump(config, f, indent=2)
+            f.write(config_str_out)
 
         print(f"Model saved to {args.model_out}")
-        print(f"Updated config saved to {args.config_updated}")
-
+        print(f"Updated config string saved to {args.config_updated}")
     args:
       - --weight
-      - {inputPath: weight}
+      - {inputValue: weight}          # now passed as string
       - --config_str
-      - {inputPath: config_str}
+      - {inputValue: config_str}      # now passed as string
       - --model_name
       - {inputValue: model_name}
       - --model_out
