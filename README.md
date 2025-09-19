@@ -62,6 +62,8 @@ Install dependencies:
 bash
 Copy code
 pip install -r requirements.txt
+
+
 ## ▶️ Usage
 🔹 Local Development
 Run the training locally:
@@ -92,6 +94,8 @@ Copy code
 dsl-compile --py pipeline/gnn_pipeline.py --output gnn_pipeline.yaml
 Then, run the pipeline from the Kubeflow Pipelines dashboard.
 
+
+
 ## 📦 Requirements
 Python (see .python-version or requirements.txt)
 
@@ -101,10 +105,15 @@ Kubernetes cluster (minikube, kind, or cloud provider)
 
 Kubeflow Pipelines installed on the cluster
 
+
+
+
 ## 🗂️ Data
 Place datasets in data/ or mount from external storage
 
 Format depends on the GNN task (e.g., node classification, link prediction, graph classification)
+
+
 
 ## 🤝 Contributing
 Contributions are welcome!
