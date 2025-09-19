@@ -63,6 +63,7 @@ bash
 Copy code
 pip install -r requirements.txt
 
+```
 
 ## ▶️ Usage
 🔹 Local Development
